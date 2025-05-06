@@ -1,0 +1,41 @@
+#ifndef IAUDIO_H
+#define IAUDIO_H
+
+#include <stdint.h>
+
+class IStream {
+public:
+   enum class State {
+       STOPPED, PLAYING, PAUSED 
+   };
+   enum class Type {
+       EMPTY = 0, LOCAL_FILE, REMOTE_FILE, LIVE, DECODE
+   };
+
+   virtual IStream::State getState() = 0;
+   virtual bool isStopped() = 0;
+   virtual bool isPlaying() = 0;
+   
+   virtual bool play() = 0;
+   virtual bool stop() = 0;
+   virtual bool pause() = 0;
+
+   virtual bool seek(float sec) = 0;
+   virtual bool setPosition(float sec) = 0;
+   virtual float getPosition() = 0;
+   
+   virtual bool setVolume(float volume) = 0;
+   virtual float getVolume() = 0;
+
+   virtual float getLength() = 0;
+   virtual uint32_t getSampleRate() = 0;
+   virtual uint8_t getChannelsCount() = 0;
+   virtual uint32_t getBitrate() = 0;
+
+   virtual void* getRawStream() = 0;
+
+protected:
+   State _state = State::STOPPED;
+   Type _type = Type::EMPTY;
+};
+#endif
