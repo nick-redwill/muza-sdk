@@ -3,12 +3,43 @@
 #include <algorithm>
 #include <iostream>
 
+BassStream::BassStream() {
+    _stream = BASS_StreamCreate(44100, 2, 0, 0, 0);
+    this->_type = IStream::Type::EMPTY;
+}
+
 BassStream::BassStream(HSTREAM stream, BassStream::Type type) : _stream(stream) {
     this->_type = type;
 }
 
-BassStream::~BassStream() {
+void BassStream::cleanup() {
     BASS_StreamFree(_stream);
+}
+
+BassStream::~BassStream() {
+    this->cleanup();
+}
+
+void BassStream::loadFromFile(const std::string& path) {
+    this->cleanup();
+
+    //TODO: Implement all additionals parameters
+    _stream = BASS_StreamCreateFile(false, path.c_str(), 0, 0, 0);
+    if (!_stream)
+        throw std::runtime_error("Unable to load file"); //TODO: Throw more specific error based on BASS ErrorCode
+
+    this->_type = IStream::Type::LOCAL_FILE;
+}
+
+void BassStream::loadFromUrl(const std::string& url) {
+    this->cleanup();
+
+    //TODO: Implement all additionals parameters
+    _stream = BASS_StreamCreateURL(url.c_str(), 0, 0, 0, 0);
+    if (!_stream)
+        throw std::runtime_error("Unable to load remote file"); //TODO: Throw more specific error based on BASS ErrorCode
+    
+    this->_type = IStream::Type::REMOTE_FILE;
 }
 
 IStream::State BassStream::getState() {

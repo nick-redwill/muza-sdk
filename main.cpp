@@ -6,12 +6,32 @@
 
 int main(int argc, char ** argv) {
     BassGlobal bass;
+    auto devs = bass.getDevices();
 
-    if (!bass.init()) {
+    for (auto dev : devs) {
+        std::cout << dev.id << " " << dev.name << std::endl;
+    }
+    
+    int id;
+    std::cout << "Enter device: ";
+    std::cin >> id;
+
+    int sampleRate, stereo;
+
+    std::cout << "Enter sample rate: ";
+    std::cin >> sampleRate;
+
+    std::cout << "Is stereo (1/0): ";
+    std::cin >> stereo;
+
+    Config config(devs[id], sampleRate, (bool)stereo);
+
+    if (!bass.init(config)) {
         return 1;
     }
-
-    BassStream stream(BASS_StreamCreateFile(false, argv[1], 0, 0, 0), BassStream::Type::LOCAL_FILE);
+   
+    BassStream stream;
+    stream.loadFromFile(argv[1]);
     stream.play();
 
     std::cout << stream.isPlaying() << std::endl;

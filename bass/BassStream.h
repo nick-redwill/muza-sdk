@@ -7,9 +7,12 @@
 
 class BassStream : public IStream {
 public:
-   
+   BassStream();
    BassStream(HSTREAM stream, Type type);
    ~BassStream();
+
+   virtual void loadFromFile(const std::string& path) override;
+   virtual void loadFromUrl(const std::string& url) override;
 
    virtual IStream::State getState() override;
    virtual bool isPlaying() override;
@@ -36,5 +39,6 @@ public:
 private:
    HSTREAM _stream;
 
+   void cleanup();
 };
 #endif

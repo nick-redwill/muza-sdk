@@ -2,6 +2,7 @@
 #define IAUDIO_H
 
 #include <stdint.h>
+#include <string>
 
 class IStream {
 public:
@@ -11,6 +12,9 @@ public:
    enum class Type {
        EMPTY = 0, LOCAL_FILE, REMOTE_FILE, LIVE, DECODE
    };
+
+   virtual void loadFromFile(const std::string& path) = 0;
+   virtual void loadFromUrl(const std::string& url) = 0;
 
    virtual IStream::State getState() = 0;
    virtual bool isStopped() = 0;
