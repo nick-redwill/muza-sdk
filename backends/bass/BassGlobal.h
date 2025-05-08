@@ -1,4 +1,4 @@
-#include "../interfaces/IGlobal.h"
+#include "../../interfaces/IGlobal.h"
 
 class BassGlobal : public IGlobal {
 

@@ -4,7 +4,7 @@ project(muza-sdk)
 set(CMAKE_CXX_STANDARD 11)
 
 include_directories(
-    bass
+    backend/bass
     cli
     entities
     interfaces
@@ -13,8 +13,8 @@ include_directories(
 )
 
 set(SOURCES
-    bass/BassGlobal.cpp
-    bass/BassStream.cpp
+    backends/bass/BassGlobal.cpp
+    backends/bass/BassStream.cpp
     cli/player.cpp
 )
 

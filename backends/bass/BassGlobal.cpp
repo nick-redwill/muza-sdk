@@ -3,6 +3,7 @@
 #include "BassGlobal.h"
 
 bool BassGlobal::init(Config config) {
+    BASS_SetConfig(BASS_CONFIG_NET_TIMEOUT, 30000); //TODO: Maybe move into different method?
     uint32_t flags = BASS_DEVICE_STEREO ? config.stereo : BASS_DEVICE_MONO;
 
     return BASS_Init(config.device.id, config.sampleRate, flags, 0, 0);
