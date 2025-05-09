@@ -6,6 +6,7 @@
 
 #include <chrono>
 #include <thread>
+#include <math.h>
 
 class BassStreamTest : public ::testing::Test {
 protected:
@@ -31,6 +32,35 @@ TEST_F(BassStreamTest, LoadLocalFileTest) {
 
 TEST_F(BassStreamTest, NoStreamTest) {
     EXPECT_THROW(stream.play(), std::runtime_error);
+}
+
+TEST_F(BassStreamTest, StreamRWTest) {
+    //NOTE: Setting playback buffer size to 1 second
+    BASS_SetConfig(
+        BASS_CONFIG_BUFFER,
+        1000
+    );
+
+    int sr = 44100; // 1 second
+    stream.load(sr, 1);
+    
+    std::vector<float> in(sr);
+    float freq = 500.f;
+
+    // Generating 500hz sin wave 
+    for (int i = 0; i < sr; i++) {
+        in.at(i) = 0.5f * sin(2 * M_PI * freq * (float)i / sr);
+    }
+
+    stream.write(in);
+    auto out = stream.read(sr);
+
+    for (int i = 0; i < sr - 2; i++) {
+        ASSERT_NEAR(out.at(i), in.at(i), 0.001); 
+    }
+
+    stream.play();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 }
 
 TEST_F(BassStreamTest, StatesTest) {

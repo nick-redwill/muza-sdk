@@ -8,7 +8,7 @@
  *
  * This constructor does not initialize the HSTREAM.
  * It is assumed that the user will initialize it later using
- * loadFromFile(), loadFromUrl(), or loadEmpty().
+ * loadFromFile(), loadFromUrl(), or load().
  *
  * If the stream is not initialized, a std::runtime_error will be thrown
  * when attempting to use it.
@@ -20,7 +20,7 @@ BassStream::BassStream() {
 }
 
 BassStream::BassStream(uint32_t sampleRate, uint8_t channels) {
-    loadEmpty(sampleRate, channels);
+    load(sampleRate, channels);
 }
 
 BassStream::BassStream(HSTREAM stream, BassStream::Type type) : _stream(stream) {
@@ -35,13 +35,13 @@ BassStream::~BassStream() {
     this->cleanup();
 }
 
-void BassStream::loadEmpty(uint32_t sampleRate, uint8_t channels) {
+void BassStream::load(uint32_t sampleRate, uint8_t channels) {
     //TODO: Implement all additionals parameters
-    _stream = BASS_StreamCreate(sampleRate, channels, 0, 0, 0);
+    _stream = BASS_StreamCreate(sampleRate, channels, BASS_SAMPLE_FLOAT, STREAMPROC_PUSH, 0);
     if (!_stream)
         throw std::runtime_error("Unable to load empty stream: " + errorStringify(BASS_ErrorGetCode()));
 
-    this->_type = IStream::Type::EMPTY;
+    this->_type = IStream::Type::MEMORY;
 }
 
 void BassStream::loadFromFile(const std::string& path) {
@@ -199,6 +199,24 @@ uint32_t BassStream::getBitrate() {
 
 HSTREAM BassStream::getRawStream() {
     return _stream;
+}
+
+
+void BassStream::write(std::vector<float> raw) {
+    int res = BASS_StreamPutData(_stream, raw.data(), raw.size() * sizeof(float));
+    
+    if (res == -1)
+        throw std::runtime_error(errorStringify(BASS_ErrorGetCode()));
+}
+
+std::vector<float> BassStream::read(uint32_t size) {
+    std::vector<float> buffer(size, 0);
+    int res = BASS_ChannelGetData(_stream, buffer.data(), size * sizeof(float) | BASS_DATA_FLOAT);
+
+    if (res == -1)
+        throw std::runtime_error(errorStringify(BASS_ErrorGetCode()));
+
+    return buffer;
 }
 
 inline void BassStream::raiseOnNoStream() {

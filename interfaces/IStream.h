@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <string>
+#include <vector>
 
 class IStream {
 public:
@@ -10,13 +11,12 @@ public:
        STOPPED, PLAYING, PAUSED, FINISHED
    };
    enum class Type {
-       NONE = 0, EMPTY, 
+       NONE = 0, MEMORY, 
        LOCAL_FILE, REMOTE_FILE, 
        LIVE, 
-       DECODE
    };
 
-   virtual void loadEmpty(uint32_t sampleRate, uint8_t channels) = 0;
+   virtual void load(uint32_t sampleRate, uint8_t channels) = 0;
    virtual void loadFromFile(const std::string& path) = 0;
    virtual void loadFromUrl(const std::string& url) = 0;
 
@@ -40,6 +40,9 @@ public:
    virtual uint32_t getSampleRate() = 0;
    virtual uint8_t getChannelsCount() = 0;
    virtual uint32_t getBitrate() = 0;
+
+   virtual void write(std::vector<float> raw) = 0;
+   virtual std::vector<float> read(uint32_t size) = 0;
 
 protected:
    Type _type = Type::NONE;

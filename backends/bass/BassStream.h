@@ -12,7 +12,7 @@ public:
    BassStream(HSTREAM stream, Type type);
    ~BassStream();
 
-   virtual void loadEmpty(uint32_t sampleRate, uint8_t channels) override;
+   virtual void load(uint32_t sampleRate, uint8_t channels) override;
    virtual void loadFromFile(const std::string& path) override;
    virtual void loadFromUrl(const std::string& url) override;
 
@@ -36,6 +36,9 @@ public:
    virtual uint32_t getSampleRate() override;
    virtual uint8_t getChannelsCount() override;
    virtual uint32_t getBitrate() override;
+
+   virtual void write(std::vector<float> raw) override;
+   virtual std::vector<float> read(uint32_t size) override;
 
    HSTREAM getRawStream();
 
