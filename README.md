@@ -5,9 +5,9 @@ MUZA is a universal audio processing SDK
 - [x] MVP of interfaces for global class and audio stream  
 - [x] Implementation of provided interfaces with BASS
 - [x] Provide simple CLI  
+- [x] Add unit tests  
 - [ ] Proper error handling and logging
-- [ ] Add unit tests  
 - [ ] Special methods for checking supported functionality (`isSupported`)  
 - [ ] SFX Module  
-- [ ] Metadata Module  
+- [ ] Metadata Module 
 - [ ] Data reading/writing Module
