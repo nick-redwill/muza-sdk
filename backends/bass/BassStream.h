@@ -48,7 +48,7 @@ private:
    static void CALLBACK finishedCallback(HSYNC handle, DWORD channel, DWORD data, void *user);
 
 private:
-   HSTREAM _stream;
+   HSTREAM _stream = 0;
    IStream::State _state = IStream::State::STOPPED;
 };
 #endif

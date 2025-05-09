@@ -3,13 +3,18 @@ project(muza-sdk)
 
 set(CMAKE_CXX_STANDARD 11)
 
+enable_testing()
+
+add_subdirectory(external/googletest)
+
 include_directories(
     backend/bass
     cli
     entities
     interfaces
     utils
-    lib
+    
+    lib/bass/inc
 )
 
 set(SOURCES
@@ -18,10 +23,20 @@ set(SOURCES
     cli/player.cpp
 )
 
-add_executable(audio_cli ${SOURCES})
+add_executable(muza_cli ${SOURCES})
+target_link_libraries(muza_cli bass)
 
-if(WIN32)
-    target_link_libraries(audio_cli bass)
-elseif(UNIX)
-    target_link_libraries(audio_cli bass)
-endif()
+add_executable(muza_tests
+    tests/bass/test_stream.cpp
+
+    backends/bass/BassGlobal.cpp
+    backends/bass/BassStream.cpp
+)
+
+target_link_libraries(muza_tests
+    gtest_main
+    bass
+)
+
+include(GoogleTest)
+gtest_discover_tests(muza_tests)
