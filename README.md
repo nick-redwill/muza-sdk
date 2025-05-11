@@ -2,8 +2,6 @@
 
 **MUZA** is a universal audio processing SDK designed to provide a unified interface for working with various audio libraries. It achieves this by defining abstract base classes and implementing polymorphic, library-specific derived classes. This architecture abstracts away the implementation details of different backends, enabling seamless switching between libraries—both at compile time and at runtime (supporting hot-swapping).
 
----
-
 ## 🚀 Features
 * Unified interface for multiple audio libraries
 * Backend switching without changing client code
@@ -62,7 +60,7 @@ ctest
 - [ ] Implement Recording Module
 - [ ] Integrate logging system
 
-## ❓ FAQ:
+## ❓ FAQ
 ### Why not include backend sources?
 Due to licensing restrictions, third-party libraries like BASS and FMOD cannot be redistributed. You must obtain them separately.
 
