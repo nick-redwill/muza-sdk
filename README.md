@@ -41,10 +41,10 @@ ctest
 
 | Backend      | Status                 |
 | ------------ | ---------------------- |
-| BASS         | ✅ Supported           |
-| FMOD         | 🚧 Planned             |
-| Superpowered | 🚧 Planned             |
-| JUCE         | ❓ Under Consideration |
+| [BASS](https://www.un4seen.com/bass.html)         | ✅ Supported           |
+| [FMOD](https://www.fmod.com/core)         | 🚧 Planned             |
+| [Superpowered](https://superpowered.com/audio-overview) | 🚧 Planned             |
+| [JUCE](https://juce.com/)         | ❓ Under Consideration |
 
 
 ## 📋 Roadmap / TODO
