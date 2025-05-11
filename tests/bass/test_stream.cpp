@@ -7,6 +7,11 @@
 #include <chrono>
 #include <thread>
 #include <math.h>
+#include <string>
+
+const std::string filePath = "./track.mp3";
+const std::string fileUrl = "https://files.freemusicarchive.org/storage-freemusicarchive-org/tracks/gWykWiyFIQwOsAHlAKIDpFoP0bFz3sH38oqfytFF.mp3";
+const std::string liveUrl = "https://s2.mexside.net/8014/stream";
 
 class BassStreamTest : public ::testing::Test {
 protected:
@@ -22,16 +27,82 @@ protected:
         bass.clean();
     }
 };
-    
 
 TEST_F(BassStreamTest, LoadLocalFileTest) {
-    stream.loadFromFile("./track.mp3");
+    stream.loadFromFile(filePath);
+    EXPECT_EQ(stream.play(), true);
+    EXPECT_EQ(stream.seek(1), true);
+    EXPECT_EQ(stream.pause(), true);
+    EXPECT_EQ(stream.stop(), true);
 
     EXPECT_THROW(stream.loadFromFile("nonexistant.mp3"), std::runtime_error);
 }
 
+TEST_F(BassStreamTest, LoadRemoteTest) {
+    stream.loadFromUrl(fileUrl);
+    stream.setVolume(0);
+
+    EXPECT_EQ(stream.play(), true);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+
+    EXPECT_EQ(stream.seek(1), true);
+    EXPECT_EQ(stream.pause(), true);
+    EXPECT_EQ(stream.stop(), true);
+}
+
+TEST_F(BassStreamTest, LoadLiveTest) {
+    stream.loadLiveUrl(liveUrl);
+    stream.setVolume(0);
+
+    EXPECT_EQ(stream.play(), true);
+    std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+    
+    EXPECT_EQ(stream.seek(-1), false);
+    EXPECT_EQ(stream.pause(), true);
+    EXPECT_EQ(stream.stop(), true);
+}
+
 TEST_F(BassStreamTest, NoStreamTest) {
     EXPECT_THROW(stream.play(), std::runtime_error);
+}
+
+TEST_F(BassStreamTest, CleanupTest) {
+    stream.loadFromFile(filePath);
+    EXPECT_EQ(stream.play(), true);
+
+    HSTREAM raw = stream.getRawStream();
+
+    stream.load(44100, 2);
+
+    // Memory error - stream is removed
+    EXPECT_EQ(BASS_ChannelPlay(raw, 0), 1);
+}
+
+TEST_F(BassStreamTest, IsSupportedTest) {
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::LOAD_MEMORY), true);
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::LOAD_FILE), true);
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::LOAD_URL), true);
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::LOAD_LIVE), true);
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::READ), true);
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::PAUSE), true);
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::STOP), true);
+
+    stream.loadFromFile(filePath);
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::WRITE), false);
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::SET_POSITION), true);
+
+    stream.loadFromUrl(fileUrl);
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::WRITE), false);
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::SET_POSITION), true);
+
+    stream.loadLiveUrl(liveUrl);
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::WRITE), false);
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::SET_POSITION), false);
+
+    stream.load(44100, 2);
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::WRITE), true);
+    EXPECT_EQ(stream.isSupported(BassStream::Functionality::SET_POSITION), true);
 }
 
 TEST_F(BassStreamTest, StreamRWTest) {
@@ -59,12 +130,12 @@ TEST_F(BassStreamTest, StreamRWTest) {
         ASSERT_NEAR(out.at(i), in.at(i), 0.001); 
     }
 
-    stream.play();
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    // stream.play();
+    // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 }
 
 TEST_F(BassStreamTest, StatesTest) {
-    stream.loadFromFile("./track.mp3");
+    stream.loadFromFile(filePath);
 
     EXPECT_EQ(stream.play(), true);
     EXPECT_EQ(stream.getState(), IStream::State::PLAYING);
@@ -77,7 +148,7 @@ TEST_F(BassStreamTest, StatesTest) {
 }
 
 TEST_F(BassStreamTest, PositionTest) {
-    stream.loadFromFile("./track.mp3");
+    stream.loadFromFile(filePath);
 
     EXPECT_EQ(stream.setPosition(50), true);
     EXPECT_EQ(stream.getPosition(), 50);
@@ -87,14 +158,14 @@ TEST_F(BassStreamTest, PositionTest) {
 }
 
 TEST_F(BassStreamTest, LengthTest) {
-    stream.loadFromFile("./track.mp3");
+    stream.loadFromFile(filePath);
 
     int len = stream.getLength();
     EXPECT_EQ(len, 239);
 }
 
 TEST_F(BassStreamTest, VolumeTest) {
-    stream.loadFromFile("./track.mp3");
+    stream.loadFromFile(filePath);
 
     EXPECT_EQ(stream.setVolume(0), true);
     EXPECT_EQ(stream.getVolume(), 0);
@@ -108,7 +179,7 @@ TEST_F(BassStreamTest, VolumeTest) {
 }
 
 TEST_F(BassStreamTest, FinishedTest) {
-    stream.loadFromFile("./track.mp3");
+    stream.loadFromFile(filePath);
     stream.setVolume(0);
 
     float len = stream.getLength();

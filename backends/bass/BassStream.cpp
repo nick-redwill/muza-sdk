@@ -16,24 +16,49 @@
  * @todo Consider changing this approach to enforce initialization.
  */
 BassStream::BassStream() {
-    this->_type = IStream::Type::NONE;
+    this->_type = Type::NONE;
 }
 
 BassStream::BassStream(uint32_t sampleRate, uint8_t channels) {
     load(sampleRate, channels);
 }
 
-BassStream::BassStream(HSTREAM stream, BassStream::Type type) : _stream(stream) {
+BassStream::BassStream(HSTREAM stream, Type type) : _stream(stream) {
     this->_type = type;
 }
 
 void BassStream::cleanup() {
     BASS_StreamFree(_stream);
+    _stream = 0;
 }
 
 BassStream::~BassStream() {
     this->cleanup();
 }
+
+bool BassStream::isSupported(Functionality func) {
+    // BASS supports all these functions no matter the conditions
+    if (func == Functionality::LOAD_MEMORY || 
+        func == Functionality::LOAD_FILE ||
+        func == Functionality::LOAD_URL || 
+        func == Functionality::LOAD_LIVE ||
+        func == Functionality::STOP ||
+        func == Functionality::PAUSE || 
+        func == Functionality::READ
+    )
+    return true;
+    
+    // You can't seek a live stream
+    if (func == Functionality::SET_POSITION && _type != Type::LIVE)
+        return true;
+
+    //TODO: I'm not sure is it possible to write into a file/remote stream
+    if (func == Functionality::WRITE && _type == Type::MEMORY)
+        return true;
+
+    return false;
+}
+
 
 void BassStream::load(uint32_t sampleRate, uint8_t channels) {
     //TODO: Implement all additionals parameters
@@ -41,7 +66,7 @@ void BassStream::load(uint32_t sampleRate, uint8_t channels) {
     if (!_stream)
         throw std::runtime_error("Unable to load empty stream: " + errorStringify(BASS_ErrorGetCode()));
 
-    this->_type = IStream::Type::MEMORY;
+    this->_type = Type::MEMORY;
 }
 
 void BassStream::loadFromFile(const std::string& path) {
@@ -53,7 +78,7 @@ void BassStream::loadFromFile(const std::string& path) {
         throw std::runtime_error("Unable to load local file: " + errorStringify(BASS_ErrorGetCode()));
 
     BASS_ChannelSetSync(_stream, BASS_SYNC_END, 0, &BassStream::finishedCallback, this);
-    this->_type = IStream::Type::LOCAL_FILE;
+    this->_type = Type::LOCAL_FILE;
 }
 
 void BassStream::loadFromUrl(const std::string& url) {
@@ -65,7 +90,18 @@ void BassStream::loadFromUrl(const std::string& url) {
         throw std::runtime_error("Unable to load remote file: " + errorStringify(BASS_ErrorGetCode()));
 
     BASS_ChannelSetSync(_stream, BASS_SYNC_END, 0, &BassStream::finishedCallback, this);
-    this->_type = IStream::Type::REMOTE_FILE;
+    this->_type = Type::REMOTE_FILE;
+}
+
+void BassStream::loadLiveUrl(const std::string& url) {
+    this->cleanup();
+
+    _stream = BASS_StreamCreateURL(url.c_str(), 0, 0, 0, 0);
+    if (!_stream)
+        throw std::runtime_error("Unable to load live stream: " + errorStringify(BASS_ErrorGetCode()));
+
+    BASS_ChannelSetSync(_stream, BASS_SYNC_END, 0, &BassStream::finishedCallback, this);
+    this->_type = Type::LIVE;
 }
 
 IStream::State BassStream::getState() {
@@ -100,14 +136,14 @@ bool BassStream::isStopped() {
 
 bool BassStream::isFinished() {
     raiseOnNoStream();
-    return _state == IStream::State::FINISHED;
+    return _state == State::FINISHED;
 }
 
 bool BassStream::play() {
     raiseOnNoStream();
 
     bool ret = BASS_ChannelPlay(_stream, false);
-    if (ret) _state = IStream::State::PLAYING;
+    if (ret) _state = State::PLAYING;
     return ret;
 }
 
@@ -115,7 +151,7 @@ bool BassStream::pause() {
     raiseOnNoStream();
 
     bool ret = BASS_ChannelPause(_stream);
-    if (ret) _state = IStream::State::PAUSED;
+    if (ret) _state = State::PAUSED;
     return ret;
 }
 
@@ -123,7 +159,7 @@ bool BassStream::stop() {
     raiseOnNoStream();
 
     bool ret = BASS_ChannelStop(_stream);
-    if (ret) _state = IStream::State::STOPPED;
+    if (ret) _state = State::STOPPED;
     return ret;
 }
 
@@ -275,5 +311,5 @@ std::string BassStream::errorStringify(int code) {
 
 void CALLBACK BassStream::finishedCallback(HSYNC handle, DWORD channel, DWORD data, void *user) {
     BassStream* instance = static_cast<BassStream*>(user);
-    instance->_state = IStream::State::FINISHED;
+    instance->_state = State::FINISHED;
  }

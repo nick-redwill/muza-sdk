@@ -12,9 +12,12 @@ public:
    BassStream(HSTREAM stream, Type type);
    ~BassStream();
 
+   virtual bool isSupported(IStream::Functionality func) override;
+
    virtual void load(uint32_t sampleRate, uint8_t channels) override;
    virtual void loadFromFile(const std::string& path) override;
    virtual void loadFromUrl(const std::string& url) override;
+   virtual void loadLiveUrl(const std::string& url) override;
 
    virtual IStream::State getState() override;
    virtual bool isPlaying() override;
