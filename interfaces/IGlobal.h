@@ -1,3 +1,6 @@
+#ifndef IGLOBAL_H
+#define IGLOBAL_H
+
 #include "../entities/device.h"
 #include "../entities/config.h"
 
@@ -14,3 +17,4 @@ public:
     virtual std::vector<Device> getDevices() = 0;
     virtual Device getDefaultDevice() = 0;
 };
+#endif

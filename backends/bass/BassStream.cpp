@@ -3,33 +3,34 @@
 #include <algorithm>
 #include <iostream>
 
-/**
- * @brief Default constructor for BassStream.
- *
- * This constructor does not initialize the HSTREAM.
- * It is assumed that the user will initialize it later using
- * loadFromFile(), loadFromUrl(), or load().
- *
- * If the stream is not initialized, a std::runtime_error will be thrown
- * when attempting to use it.
- *
- * @todo Consider changing this approach to enforce initialization.
- */
-BassStream::BassStream() {
-    this->_type = Type::NONE;
-}
 
 BassStream::BassStream(uint32_t sampleRate, uint8_t channels) {
     load(sampleRate, channels);
+    _type = Type::MEMORY;
 }
 
 BassStream::BassStream(HSTREAM stream, Type type) : _stream(stream) {
-    this->_type = type;
+    _type = type;
+}
+
+BassStream::BassStream(const std::string& source, Type type) {
+    if (type == Type::MEMORY)
+        throw std::runtime_error("Type cannot be MEMORY in this constructor");
+    
+    if (type == Type::LOCAL_FILE)
+        loadFromFile(source);
+    else if (type == Type::REMOTE_FILE)
+        loadFromUrl(source);
+    else if (type == Type::LIVE)
+        loadLiveUrl(source);
+
+    _type = type;
 }
 
 void BassStream::cleanup() {
-    BASS_StreamFree(_stream);
-    _stream = 0;
+    int ret = BASS_StreamFree(_stream);
+    if (ret == 0)
+        throw std::runtime_error("Unable to cleanup: " + errorStringify(BASS_ErrorGetCode()));
 }
 
 BassStream::~BassStream() {
@@ -70,43 +71,32 @@ void BassStream::load(uint32_t sampleRate, uint8_t channels) {
 }
 
 void BassStream::loadFromFile(const std::string& path) {
-    this->cleanup();
-
     //TODO: Implement all additionals parameters
     _stream = BASS_StreamCreateFile(false, path.c_str(), 0, 0, 0);
     if (!_stream)
         throw std::runtime_error("Unable to load local file: " + errorStringify(BASS_ErrorGetCode()));
 
     BASS_ChannelSetSync(_stream, BASS_SYNC_END, 0, &BassStream::finishedCallback, this);
-    this->_type = Type::LOCAL_FILE;
 }
 
 void BassStream::loadFromUrl(const std::string& url) {
-    this->cleanup();
-
     //TODO: Implement all additionals parameters
     _stream = BASS_StreamCreateURL(url.c_str(), 0, 0, 0, 0);
     if (!_stream)
         throw std::runtime_error("Unable to load remote file: " + errorStringify(BASS_ErrorGetCode()));
 
     BASS_ChannelSetSync(_stream, BASS_SYNC_END, 0, &BassStream::finishedCallback, this);
-    this->_type = Type::REMOTE_FILE;
 }
 
 void BassStream::loadLiveUrl(const std::string& url) {
-    this->cleanup();
-
     _stream = BASS_StreamCreateURL(url.c_str(), 0, 0, 0, 0);
     if (!_stream)
         throw std::runtime_error("Unable to load live stream: " + errorStringify(BASS_ErrorGetCode()));
 
     BASS_ChannelSetSync(_stream, BASS_SYNC_END, 0, &BassStream::finishedCallback, this);
-    this->_type = Type::LIVE;
 }
 
 IStream::State BassStream::getState() {
-    raiseOnNoStream();
-
     return _state;
 
     // TODO: Combine this code with returning set state
@@ -123,66 +113,49 @@ IStream::State BassStream::getState() {
 }
 
 bool BassStream::isPlaying() {
-    raiseOnNoStream();
-
     return getState() == BassStream::State::PLAYING;
 }
 
 bool BassStream::isStopped() {
-    raiseOnNoStream();
-
     return getState() == BassStream::State::STOPPED;
 }
 
 bool BassStream::isFinished() {
-    raiseOnNoStream();
     return _state == State::FINISHED;
 }
 
 bool BassStream::play() {
-    raiseOnNoStream();
-
     bool ret = BASS_ChannelPlay(_stream, false);
     if (ret) _state = State::PLAYING;
     return ret;
 }
 
 bool BassStream::pause() {
-    raiseOnNoStream();
-
     bool ret = BASS_ChannelPause(_stream);
     if (ret) _state = State::PAUSED;
     return ret;
 }
 
 bool BassStream::stop() {
-    raiseOnNoStream();
-
     bool ret = BASS_ChannelStop(_stream);
     if (ret) _state = State::STOPPED;
     return ret;
 }
 
 bool BassStream::seek(float sec) {
-    raiseOnNoStream();
-
+    //FIXME: This is horrible, fix asap
     float pos = BASS_ChannelBytes2Seconds(_stream, BASS_ChannelGetPosition(_stream, BASS_POS_BYTE));
     pos += sec;
     pos = std::min(std::max(pos, 0.0f), (float)this->getLength());
     
-    std::cout << pos << "\n";
     return BASS_ChannelSetPosition(_stream, BASS_ChannelSeconds2Bytes(_stream, pos), BASS_POS_BYTE);
 }
 
 bool BassStream::setPosition(float sec) {
-    raiseOnNoStream();
-
     return BASS_ChannelSetPosition(_stream, BASS_ChannelSeconds2Bytes(_stream, sec), BASS_POS_BYTE);
 }
 
 float BassStream::getPosition() {
-    raiseOnNoStream();
-
     return BASS_ChannelBytes2Seconds(
        _stream, BASS_ChannelGetPosition(_stream, BASS_POS_BYTE)
     ); 
@@ -190,44 +163,33 @@ float BassStream::getPosition() {
 
 
 bool BassStream::setVolume(float volume) {
-    raiseOnNoStream();
-
     return BASS_ChannelSetAttribute(_stream, BASS_ATTRIB_VOL, volume);
 }
 
 float BassStream::getVolume() {
-    raiseOnNoStream();
-
     float volume = 0;
     BASS_ChannelGetAttribute(_stream, BASS_ATTRIB_VOL, &volume);
     return volume;
 }
 
 float BassStream::getLength() { 
-    raiseOnNoStream();
-
     return BASS_ChannelBytes2Seconds(
        _stream, BASS_ChannelGetLength(_stream, BASS_POS_BYTE)
     ); 
 }
 
 uint32_t BassStream::getSampleRate() { 
-    raiseOnNoStream();
-
     float value;
     BASS_ChannelGetAttribute(_stream, BASS_ATTRIB_FREQ, &value);
     return (uint32_t)value;
 }
 
 uint8_t BassStream::getChannelsCount() { 
-    raiseOnNoStream();
     //FIXME: Actually implement (if possible)
     return 0;
 }
 
 uint32_t BassStream::getBitrate() { 
-    raiseOnNoStream();
-
     float value;
     BASS_ChannelGetAttribute(_stream, BASS_ATTRIB_BITRATE, &value);
     return (uint32_t)value; 
@@ -253,11 +215,6 @@ std::vector<float> BassStream::read(uint32_t size) {
         throw std::runtime_error(errorStringify(BASS_ErrorGetCode()));
 
     return buffer;
-}
-
-inline void BassStream::raiseOnNoStream() {
-    if (!_stream)
-        throw std::runtime_error("Stream has not been initialized");
 }
 
 std::string BassStream::errorStringify(int code) {

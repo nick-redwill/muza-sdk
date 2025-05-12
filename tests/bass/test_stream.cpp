@@ -16,7 +16,6 @@ const std::string liveUrl = "https://s2.mexside.net/8014/stream";
 class BassStreamTest : public ::testing::Test {
 protected:
     BassGlobal bass;
-    BassStream stream;
 
     void SetUp() override {
         auto device = bass.getDefaultDevice();
@@ -29,17 +28,18 @@ protected:
 };
 
 TEST_F(BassStreamTest, LoadLocalFileTest) {
-    stream.loadFromFile(filePath);
+    BassStream stream(filePath, BassStream::Type::LOCAL_FILE);
+
     EXPECT_EQ(stream.play(), true);
     EXPECT_EQ(stream.seek(1), true);
     EXPECT_EQ(stream.pause(), true);
     EXPECT_EQ(stream.stop(), true);
 
-    EXPECT_THROW(stream.loadFromFile("nonexistant.mp3"), std::runtime_error);
+    EXPECT_THROW(BassStream("nonexistant.mp3", BassStream::Type::LOCAL_FILE), std::runtime_error);
 }
 
 TEST_F(BassStreamTest, LoadRemoteTest) {
-    stream.loadFromUrl(fileUrl);
+    BassStream stream(fileUrl, BassStream::Type::REMOTE_FILE);
     stream.setVolume(0);
 
     EXPECT_EQ(stream.play(), true);
@@ -52,7 +52,7 @@ TEST_F(BassStreamTest, LoadRemoteTest) {
 }
 
 TEST_F(BassStreamTest, LoadLiveTest) {
-    stream.loadLiveUrl(liveUrl);
+    BassStream stream(liveUrl, BassStream::Type::LIVE);
     stream.setVolume(0);
 
     EXPECT_EQ(stream.play(), true);
@@ -63,23 +63,22 @@ TEST_F(BassStreamTest, LoadLiveTest) {
     EXPECT_EQ(stream.stop(), true);
 }
 
-TEST_F(BassStreamTest, NoStreamTest) {
-    EXPECT_THROW(stream.play(), std::runtime_error);
-}
-
 TEST_F(BassStreamTest, CleanupTest) {
-    stream.loadFromFile(filePath);
-    EXPECT_EQ(stream.play(), true);
+    BassStream* stream = new BassStream(filePath, BassStream::Type::LOCAL_FILE);
+    EXPECT_EQ(stream->play(), true);
 
-    HSTREAM raw = stream.getRawStream();
+    HSTREAM raw = stream->getRawStream();
 
-    stream.load(44100, 2);
+    delete stream;
 
-    // Memory error - stream is removed
-    EXPECT_EQ(BASS_ChannelPlay(raw, 0), 1);
+    // Handle error - stream has been removed
+    BASS_ChannelPlay(raw, 0);
+    EXPECT_EQ(BASS_ErrorGetCode(), BASS_ERROR_HANDLE);
 }
 
 TEST_F(BassStreamTest, IsSupportedTest) {
+    BassStream stream(filePath, BassStream::Type::LOCAL_FILE);
+
     EXPECT_EQ(stream.isSupported(BassStream::Functionality::LOAD_MEMORY), true);
     EXPECT_EQ(stream.isSupported(BassStream::Functionality::LOAD_FILE), true);
     EXPECT_EQ(stream.isSupported(BassStream::Functionality::LOAD_URL), true);
@@ -87,22 +86,20 @@ TEST_F(BassStreamTest, IsSupportedTest) {
     EXPECT_EQ(stream.isSupported(BassStream::Functionality::READ), true);
     EXPECT_EQ(stream.isSupported(BassStream::Functionality::PAUSE), true);
     EXPECT_EQ(stream.isSupported(BassStream::Functionality::STOP), true);
-
-    stream.loadFromFile(filePath);
     EXPECT_EQ(stream.isSupported(BassStream::Functionality::WRITE), false);
     EXPECT_EQ(stream.isSupported(BassStream::Functionality::SET_POSITION), true);
 
-    stream.loadFromUrl(fileUrl);
-    EXPECT_EQ(stream.isSupported(BassStream::Functionality::WRITE), false);
-    EXPECT_EQ(stream.isSupported(BassStream::Functionality::SET_POSITION), true);
+    BassStream stream2(fileUrl, BassStream::Type::REMOTE_FILE);
+    EXPECT_EQ(stream2.isSupported(BassStream::Functionality::WRITE), false);
+    EXPECT_EQ(stream2.isSupported(BassStream::Functionality::SET_POSITION), true);
 
-    stream.loadLiveUrl(liveUrl);
-    EXPECT_EQ(stream.isSupported(BassStream::Functionality::WRITE), false);
-    EXPECT_EQ(stream.isSupported(BassStream::Functionality::SET_POSITION), false);
+    BassStream stream3(liveUrl, BassStream::Type::LIVE);
+    EXPECT_EQ(stream3.isSupported(BassStream::Functionality::WRITE), false);
+    EXPECT_EQ(stream3.isSupported(BassStream::Functionality::SET_POSITION), false);
 
-    stream.load(44100, 2);
-    EXPECT_EQ(stream.isSupported(BassStream::Functionality::WRITE), true);
-    EXPECT_EQ(stream.isSupported(BassStream::Functionality::SET_POSITION), true);
+    BassStream stream4(44100, 2);
+    EXPECT_EQ(stream4.isSupported(BassStream::Functionality::WRITE), true);
+    EXPECT_EQ(stream4.isSupported(BassStream::Functionality::SET_POSITION), true);
 }
 
 TEST_F(BassStreamTest, StreamRWTest) {
@@ -113,7 +110,7 @@ TEST_F(BassStreamTest, StreamRWTest) {
     );
 
     int sr = 44100; // 1 second
-    stream.load(sr, 1);
+    BassStream stream(sr, 1);
     
     std::vector<float> in(sr);
     float freq = 500.f;
@@ -135,7 +132,7 @@ TEST_F(BassStreamTest, StreamRWTest) {
 }
 
 TEST_F(BassStreamTest, StatesTest) {
-    stream.loadFromFile(filePath);
+    BassStream stream(filePath, BassStream::Type::LOCAL_FILE);
 
     EXPECT_EQ(stream.play(), true);
     EXPECT_EQ(stream.getState(), IStream::State::PLAYING);
@@ -148,7 +145,7 @@ TEST_F(BassStreamTest, StatesTest) {
 }
 
 TEST_F(BassStreamTest, PositionTest) {
-    stream.loadFromFile(filePath);
+    BassStream stream(filePath, BassStream::Type::LOCAL_FILE);
 
     EXPECT_EQ(stream.setPosition(50), true);
     EXPECT_EQ(stream.getPosition(), 50);
@@ -158,14 +155,14 @@ TEST_F(BassStreamTest, PositionTest) {
 }
 
 TEST_F(BassStreamTest, LengthTest) {
-    stream.loadFromFile(filePath);
+    BassStream stream(filePath, BassStream::Type::LOCAL_FILE);
 
     int len = stream.getLength();
     EXPECT_EQ(len, 239);
 }
 
 TEST_F(BassStreamTest, VolumeTest) {
-    stream.loadFromFile(filePath);
+    BassStream stream(filePath, BassStream::Type::LOCAL_FILE);
 
     EXPECT_EQ(stream.setVolume(0), true);
     EXPECT_EQ(stream.getVolume(), 0);
@@ -179,7 +176,7 @@ TEST_F(BassStreamTest, VolumeTest) {
 }
 
 TEST_F(BassStreamTest, FinishedTest) {
-    stream.loadFromFile(filePath);
+    BassStream stream(filePath, BassStream::Type::LOCAL_FILE);
     stream.setVolume(0);
 
     float len = stream.getLength();
@@ -192,7 +189,7 @@ TEST_F(BassStreamTest, FinishedTest) {
 }
 
 TEST_F(BassStreamTest, StreamInfoTest) {
-    stream.loadFromFile("./track.mp3");
+    BassStream stream(filePath, BassStream::Type::LOCAL_FILE);
 
     EXPECT_EQ(stream.getSampleRate(), 48000);
     EXPECT_EQ(stream.getBitrate(), 256);

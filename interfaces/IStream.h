@@ -1,5 +1,5 @@
-#ifndef IAUDIO_H
-#define IAUDIO_H
+#ifndef ISTREAM_H
+#define ISTREAM_H
 
 #include <stdint.h>
 #include <string>
@@ -11,9 +11,7 @@ public:
         STOPPED, PLAYING, PAUSED, FINISHED
     };
     enum class Type {
-        NONE = 0, MEMORY, 
-        LOCAL_FILE, REMOTE_FILE, 
-        LIVE, 
+        MEMORY, LOCAL_FILE, REMOTE_FILE, LIVE, 
     };
     // Enumeration of features for isSupported method
     enum class Functionality {
@@ -23,11 +21,6 @@ public:
     };
 
     virtual bool isSupported(IStream::Functionality func) = 0;
-
-    virtual void load(uint32_t sampleRate, uint8_t channels) = 0;
-    virtual void loadFromFile(const std::string& path) = 0;
-    virtual void loadFromUrl(const std::string& url) = 0;
-    virtual void loadLiveUrl(const std::string& url) = 0;
 
     virtual IStream::State getState() = 0;
     virtual bool isStopped() = 0;
@@ -54,6 +47,12 @@ public:
     virtual std::vector<float> read(uint32_t size) = 0;
 
 protected:
-    Type _type = Type::NONE;
+    virtual void load(uint32_t sampleRate, uint8_t channels) = 0;
+    virtual void loadFromFile(const std::string& path) = 0;
+    virtual void loadFromUrl(const std::string& url) = 0;
+    virtual void loadLiveUrl(const std::string& url) = 0;
+
+protected:
+    Type _type;
 };
 #endif
