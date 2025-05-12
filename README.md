@@ -43,6 +43,7 @@ ctest
 | [FMOD](https://www.fmod.com/core)         | 🚧 Planned             |
 | [Superpowered](https://superpowered.com/audio-overview) | 🚧 Planned             |
 | [JUCE](https://juce.com/)         | ❓ Under Consideration |
+| [SoLoud](https://solhsa.com/soloud/)         | ❓ Under Consideration |
 
 
 ## 📋 Roadmap / TODO
